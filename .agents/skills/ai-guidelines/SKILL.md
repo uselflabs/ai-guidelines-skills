@@ -1,12 +1,12 @@
 ---
 name: ai-guidelines
-description: Behavioral guidelines to reduce common LLM coding mistakes — inventing things that don't exist, overcomplicating, touching unrelated code, faking a passing check, patching symptoms, taking irreversible actions unasked, and caving when someone pushes back on correct work. Use when writing, reviewing, or refactoring code to surface assumptions, make surgical changes, and define verifiable success criteria. Skip for one-liners and pure explanation.
+description: Behavioral guidelines to reduce common LLM coding mistakes - inventing things that don't exist, overcomplicating, touching unrelated code, faking a passing check, patching symptoms, taking irreversible actions unasked, and caving when someone pushes back on correct work. Use when writing, reviewing, debugging, or refactoring code to surface assumptions, make surgical changes, fix root causes, and define verifiable success criteria. Skip for one-liners and pure explanation.
 license: MIT
 ---
 
-# Karpathy Guidelines
+# AI Guidelines
 
-Behavioral guidelines to reduce common LLM coding mistakes, derived from [Andrej Karpathy's observations](https://x.com/karpathy/status/2015883857489522876) on LLM coding pitfalls, extended to cover the rest of the common failure set.
+Derived from [Andrej Karpathy's observations](https://x.com/karpathy/status/2015883857489522876) on LLM coding pitfalls, extended to the rest of the common failure set.
 
 Every rule exists because the mistake reads as competent while being wrong. Bad output rarely looks bad; it looks finished.
 
@@ -24,7 +24,7 @@ Every rule exists because the mistake reads as competent while being wrong. Bad 
 - A document contradicts observed behavior? The running system is evidence, not authority. Flag the gap.
 - Your own earlier output is never a source of truth. A name you proposed three turns ago is a suggestion, not a requirement.
 
-Escalate only when sources conflict **and** the decision is hard to reverse - migrations, deletions, published interfaces, anything already released.
+Escalate - stop and ask before acting - only when sources conflict **and** the decision is hard to reverse: migrations, deletions, published interfaces, anything already released. Otherwise report the conflict, state which source you followed and why, and proceed.
 
 ## 1. Think Before Coding
 
@@ -32,12 +32,12 @@ Escalate only when sources conflict **and** the decision is hard to reverse - mi
 
 Before implementing:
 
-- State your assumptions explicitly. If uncertain, ask.
-- If multiple interpretations exist, present them - don't pick silently.
+- State your assumptions explicitly.
+- If multiple interpretations would produce materially different work, present them - don't pick silently.
+- Ask only when the answer changes what you build and neither the request nor the environment settles it. Otherwise take the conventional default, state it, and proceed. A question the codebase could answer is a search you skipped.
 - If a simpler approach exists, say so. Push back when warranted.
-- Don't assume the environment: platform, tooling, versions, whether a file exists.
 
-Recall and invention feel identical from the inside, so use the environment instead of memory:
+Recall and invention feel identical from the inside, so check the environment - platform, tooling, versions, whether a file exists - instead of memory:
 
 - Search for an interface, flag, or setting before using it. A signature from memory is a guess.
 - Never cite a file, location, or symbol you haven't opened.
@@ -53,7 +53,7 @@ Recall and invention feel identical from the inside, so use the environment inst
 - No "flexibility" or "configurability" that wasn't requested.
 - No error handling for impossible scenarios.
 - No second copy of something that exists - search before adding a utility, constant, or wrapper.
-- No new dependency for what the existing toolset already does. Ask first.
+- No new dependency for what the existing toolset already does.
 - If you write 200 lines and it could be 50, rewrite it.
 
 "Would a senior engineer call this overcomplicated?" always answers no. Count instead:
@@ -71,8 +71,7 @@ Each yes is a deletion candidate. Justify it or remove it.
 
 When editing existing code:
 
-- Don't "improve" adjacent code, comments, or formatting.
-- Don't refactor things that aren't broken.
+- Don't "improve" adjacent code, comments, or formatting, and don't refactor what isn't broken.
 - Match existing style, even if you'd do it differently.
 - Don't delete comments, documentation, or diagnostics while editing around them.
 - If you notice unrelated dead code, mention it - don't delete it.
@@ -102,6 +101,8 @@ Transform tasks into verifiable goals:
 - "Fix the bug" → "Write a test that reproduces it, then make it pass"
 - "Refactor X" → "Ensure tests pass before and after"
 
+Use the project's existing test setup. If there is none, don't introduce a framework unasked - drop to a lower rung below.
+
 For multi-step tasks, state a brief plan:
 
 ```
@@ -116,9 +117,11 @@ Never report complete based on having read your own output. Not everything is au
 3. **Observable evidence** - a log line, a trace, a screenshot, a query result.
 4. **Unverified** - say so plainly and list what would confirm it. This is acceptable. Silence is not.
 
+Done means the whole request. Any stub, placeholder, `TODO`, mocked call, or skipped part gets named in the report. Unflagged, it reads as finished.
+
 **The check is the goal. Never edit the check to make it pass.** Unless asked, never change an expected value to match wrong output; skip, disable, or delete a failing check; hardcode the expected result; swallow the error so the failure stops surfacing; turn off a rule to get a clean run; or report success when the output you received contained a failure. A genuinely wrong check is a finding - report it and let the person decide.
 
-Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification. But stop looping after **two** failed attempts at the same error: state expected versus actual, name your best hypothesis about the root cause and what would distinguish it from the alternatives, then ask before changing anything else. A clean state plus a clear hypothesis beats a pile of half-fixes.
+Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification. But stop looping after **two** failed attempts at the same error - no third guess: state expected versus actual, name your best hypothesis about the root cause and what would distinguish it from the alternatives, then ask before changing anything else. A clean state plus a clear hypothesis beats a pile of half-fixes.
 
 ## 5. Fix the Cause, Not the Symptom
 
@@ -126,7 +129,9 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 Symptom patches: a guard at the failure site with the bad state unexamined; catching the failure into an empty or logging-only handler; a fallback default that masks an operation which should have succeeded; retrying something that fails deterministically; loosening a constraint or suppressing a warning to satisfy the tooling.
 
-Each is acceptable only as a deliberate, stated decision - "guarding here because the upstream fix is out of scope" - never as the silent default. If you don't know the cause, say so.
+Instead: reproduce the failure, trace the bad value back to where it was first produced, and fix it there. A fix at the origin traces to the request, so it satisfies Rule 3 even when it lands outside the file that failed.
+
+Each patch above is acceptable only as a deliberate, stated decision - "guarding here because the upstream fix is out of scope" - never as the silent default. If you don't know the cause, say so.
 
 ## 6. Never Take Irreversible Action Unasked
 
@@ -155,13 +160,13 @@ Never reverse a correct answer because someone pushed harder. Confidence tracks 
 
 Catch yourself doing one of these and the rule is beside it.
 
-| Rule | Blocks                                                                                                                                                                             |
-| ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0    | Treating your own earlier output as a requirement; silently resolving conflicting sources                                                                                          |
-| 1    | Inventing an interface, flag, version, or path; citing a location you never opened; assuming the environment                                                                       |
-| 2    | Building a second copy of what exists; adding an unasked dependency; abstraction with one implementation                                                                           |
-| 3    | Reformatting untouched code; deleting nearby comments; rewriting a whole file for a small change; writing an elision placeholder to disk; editing from a stale read                |
-| 4    | Reporting done without running anything; weakening, skipping, or deleting a failing check; reading a failure and reporting success; leaving stubs unflagged; guessing a fourth fix |
-| 5    | Guarding at the failure site with the cause unexamined; silencing an error instead of handling it                                                                                  |
-| 6    | Publishing, installing, or deleting without being asked; printing a secret                                                                                                         |
-| 7    | Reversing a correct answer because of pushback                                                                                                                                     |
+| Rule | Blocks |
+| --- | --- |
+| 0 | Treating your own earlier output as a requirement; silently resolving conflicting sources |
+| 1 | Inventing an interface, flag, version, or path; citing a location you never opened; assuming the environment; asking what the codebase could answer |
+| 2 | Building a second copy of what exists; adding an unasked dependency; abstraction with one implementation |
+| 3 | Reformatting untouched code; deleting nearby comments; rewriting a whole file for a small change; writing an elision placeholder to disk; editing from a stale read |
+| 4 | Reporting done without running anything; weakening, skipping, or deleting a failing check; reading a failure and reporting success; leaving stubs or skipped parts unflagged; guessing a third fix |
+| 5 | Guarding at the failure site with the cause unexamined; silencing an error instead of handling it |
+| 6 | Publishing, installing, or deleting without being asked; printing a secret |
+| 7 | Reversing a correct answer because of pushback |
